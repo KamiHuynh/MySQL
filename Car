@@ -1,0 +1,92 @@
+-- Dataset: Car store and office details, invoices, and customers
+-- Source: Data sets from Github
+-- Queried using: MySQL
+
+-- #1. Show full name, customer ID, and country for all customers who are not in the USA
+select 
+	contactLastName,
+    contactFirstName,
+    customerNumber,
+    country    
+from customers
+	where country <> 'USA'
+	order by country;
+    
+-- #2. Show only the customers from Germany
+select 
+	contactLastName,
+    contactFirstName,
+    customerNumber
+from customers
+	where country = 'Germany';
+    
+-- #3. Find the orders of customers who are from Germany and display the customer's full name,
+-- including order number, order date and comments
+select 
+	customers.customerNumber,
+    customers.contactFirstName,
+	customers.contactLastName,
+    orders.orderNumber,
+    orders.orderDate,
+    orders.comments
+from orders
+	left join customers
+	on customers.customerNumber = orders.customerNumber
+    where customers.country = 'Germany'
+order by orders.orderDate;
+
+-- #4. Show the employees who are sales receptionists
+select
+	lastName,
+    firstName,
+    email,
+    officeCode
+from employees
+	where jobTitle = 'Sales Rep'
+    order by 4;
+
+-- #5. Show the total payments of customers from Belgium, Germany, Austria and France by each year
+
+select
+	sum(case when customers.country = 'Belgium' then payments.amount else null end) as Belgium_payment,
+    sum(case when customers.country = 'Germany' then payments.amount else null end) as Germany_payment,
+    sum(case when customers.country = 'Austria' then payments.amount else null end) as Austria_payment,
+    sum(case when customers.country = 'France' then payments.amount else null end) as France_payment,
+    year(payments.paymentDate) as year
+from customers
+	left join payments
+    on payments.customerNumber = customers.customerNumber
+    where year(payments.paymentDate) is not null
+group by year(payments.paymentDate)
+order by year(payments.paymentDate);
+
+--  #6. How many orders were there in 2003, 2004 and 2005?
+select 
+	count(orderNumber) as orders,
+    year(orderDate) as year
+from orders
+	group by year(orderDate);
+    
+--  #7. Show the quantity order and in stock of all products until the end of 2003, also the products' line and scale should be taken into account
+select 
+	products.productLine,
+    products.productName,
+    sum(orderdetails.quantityOrdered),
+    products.quantityInStock 
+    
+from products
+left join orderdetails
+	on orderdetails.productCode = products.productCode
+group by 1,2
+order by 1;
+    
+--  #8. How many orders based on product line
+select 
+	sum(orderdetails.quantityOrdered) as total_orders_by_productline,
+    products.productLine
+from orderdetails
+left join products
+	on orderdetails.productCode = products.productCode
+group by 2
+order by 1 desc
+    ;
