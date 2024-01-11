@@ -1,6 +1,6 @@
 -- Dataset: Movie
--- Resource: Udemy course's final project
--- MySQL
+-- Source: Udemy course's final project
+-- Queried using: MySQL
 /* 
 1. My partner and I want to come by each of the stores in person and meet the managers. 
 Please send over the managers’ names at each store, with the full address 
