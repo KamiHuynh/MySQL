@@ -1,0 +1,99 @@
+-- Dataset: The World
+-- Source: Github database
+-- Queried using: MySQL
+
+use world;
+-- #1. Show countries which have life expectancy over 80, with continent, region, independent year, population and GNP
+select 
+	name as country_name,
+    Continent,
+    Region,
+    Population,
+    GNP,
+    LifeExpectancy
+from country 
+	where LifeExpectancy >= '80.0'
+    order by LifeExpectancy desc;
+    
+-- #2. Show countries which have government form as Republic, with continent, region, independent year, population and GNP and official language
+select 
+	country.name as country_name,
+    country.Continent,
+    country.Region,
+    country.IndepYear,
+    country.Population,
+    country.GNP,
+    countrylanguage.Language
+from country
+	inner join countrylanguage
+    on countrylanguage.CountryCode = country.Code
+    where country.GovernmentForm = 'Republic'
+    and countrylanguage.IsOfficial = 'T'
+    order by 2;
+    
+-- #3. Show countries which have GNP more than 100000, life expectancy more than 75 and Population not more than 5 million
+select 
+	name as country_name,
+    GNP,
+    LifeExpectancy,
+    Population
+from country
+	where GNP > '100000'
+    and LifeExpectancy >= '75.0'
+    and Population <= '5000000';
+
+-- #4. Show the country name with the official language and percentage of using and population of this country more than 50 million
+select 
+	country.name as country_name,
+    country.Population,
+    countrylanguage.language,
+    countrylanguage.Percentage
+from country
+inner join countrylanguage
+	on countrylanguage.CountryCode = country.Code
+    where country.Population >= '50000000'
+    and countrylanguage.IsOfficial = 'T'
+;
+-- #5. Show cities which have more than 4 million people and their country's name
+select 
+	city.Name as city_name,
+    city.Population,
+    country.name as country_name
+from city
+	inner join country
+    on country.Code = city.CountryCode
+    where city.Population >= '4000000'
+    ;
+    
+-- #6. Show the largest economies in Europe with higest GNP, population, life expectancy, their capital and official language
+create temporary table  question6_result
+select
+	code,
+    name as country_name,
+    GNP,
+    Population,
+    LifeExpectancy,
+    Capital
+from country
+    where Continent = 'Europe'
+order by 2 desc;
+
+-- #7. From data in #6, show those countries' cities which have more than 4 million people
+select 
+	question6_result.country_name,
+    city.Name,
+    city.Population    
+from question6_result
+left join city
+	on question6_result.code = city.CountryCode
+    where city.Population >= '3000000';
+    
+-- #8. Show countries which have largest surface area in Asia, with their population, and GNP
+select 
+	name as country_name,
+    SurfaceArea,
+    LifeExpectancy,
+    GNP
+from country
+order by SurfaceArea desc;
+    
