@@ -1,3 +1,146 @@
 -- Dataset: Ecommerce & Web Analytics
 -- Source: Udemy advanced MySQL course's practice
 -- Queried using: MySQL
+
+use mavenfuzzyfactory;
+-- #1. Finding top traffic sources
+select 
+	utm_source,
+    utm_campaign,
+    http_referer,
+    count(distinct website_session_id) as sessions
+from website_sessions
+	where created_at <= '2012-04-12'
+group by 1,2,3
+order by 4 desc; -- gsearch and nonbrand is the top traffic source, which is dug deeper later on
+
+-- #2. Traffic source conversion rates from session to order (gsearch and nonbrand)
+select 
+	count(distinct website_sessions.website_session_id) as sessions,
+    count(distinct orders.order_id) as orders,
+    count(distinct orders.order_id)/count(distinct website_sessions.website_session_id) as gsearch_nonbrand_cvr
+From website_sessions
+left join orders
+	on website_sessions.website_session_id = orders.website_session_id
+where website_sessions.created_at <= '2012-04-14'
+	and website_sessions.utm_source = 'gsearch'
+    and website_sessions.utm_campaign = 'nonbrand';
+
+-- #3. Pull conversion rates of gsearch device-level performance (mobile or desktop)
+select 
+	website_sessions.device_type,
+    count(distinct website_sessions.website_session_id) as sessions,
+    count(distinct orders.order_id) as orders,
+    count(distinct orders.order_id) / count(distinct website_sessions.website_session_id) as cvr
+from website_sessions
+left join orders
+	on website_sessions.website_session_id = orders.website_session_id
+where website_sessions.created_at < '2012-05-11'
+    and website_sessions.utm_source = 'gsearch'
+    and website_sessions.utm_campaign = 'nonbrand'
+    group by website_sessions.device_type;
+    
+-- #4. Analysis for channel porfolio management
+
+select 
+	yearweek(created_at),
+    min(date(created_at)) as start_weekly_date,
+    count(distinct website_session_id) as total_sessions,
+	count(distinct case when utm_source = 'gsearch' then website_session_id else null end) as gsearch_sessions,
+    count(distinct case when utm_source = 'bsearch' then website_session_id else null end) as bsearch_sessions
+from website_sessions
+	where created_at > '2012-08-22' 
+    and created_at < '2012-11-29'
+    and utm_campaign = 'nonbrand' -- limiting to nonbrand paid search
+group by yearweek(created_at);
+
+-- #5. Comparing channel characteristics
+select 
+	utm_source,
+    count(distinct website_session_id) as sessions,
+    count(distinct case when utm_source = 'gsearch' and device_type = 'mobile' then website_session_id else null end) as gsearch_mobile_sessions,
+    count(distinct case when utm_source = 'bsearch' and device_type = 'mobile' then website_session_id else null end) as bsearch_mobile_sessions,
+	count(distinct case when utm_source = 'gsearch' and device_type = 'mobile' then website_session_id else null end)/count(distinct website_session_id) as gsearch_rate,
+	count(distinct case when utm_source = 'bsearch' and device_type = 'mobile' then website_session_id else null end)/count(distinct website_session_id) as bsearch_rate
+from website_sessions
+where created_at > '2012-08-22'
+	and created_at < '2012-11-30'
+    and utm_campaign = 'nonbrand'
+    and utm_source in ('bsearch', 'gsearch')
+group by utm_source;
+
+-- #6. Analyzing business patterns and seasonality
+
+select 
+	year(website_sessions.created_at) as year,
+    month(website_sessions.created_at) as month,
+    count(distinct website_sessions.website_session_id) as sessions,
+    count(orders.order_id) as orders
+from website_sessions
+	left join orders
+		on website_sessions.website_session_id = orders.website_session_id
+	where website_sessions.created_at < '2013-01-01'
+group by 1,2;
+
+select 
+	week(website_sessions.created_at) as week,
+	min(date (website_sessions.created_at)) as week_start_date,
+    count(distinct website_sessions.website_session_id) as sessions,
+    count(orders.order_id) as orders
+from website_sessions
+	left join orders
+		on website_sessions.website_session_id = orders.website_session_id
+	where website_sessions.created_at < '2013-01-01'
+group by 1;
+
+-- #7. Analyzing business patterns
+create temporary table hourly_daily_sessions
+select
+	date(created_at) as created_date,
+    weekday(created_at) as weekday,
+    hour(created_at) as hour,
+    count(distinct website_session_id) as website_sessions
+from website_sessions
+	where created_at between '2012-09-15' and '2012-11-15'
+group by 1,2,3;
+
+select
+	hour,
+    round(avg(website_sessions),1) as avg_sessions,
+    round(avg(case when weekday = 0 then website_sessions else null end),1) as Monday,
+	round(avg(case when weekday = 1 then website_sessions else null end),1) as Tuesday,
+	round(avg(case when weekday = 2 then website_sessions else null end),1) as Wednesday,
+	round(avg(case when weekday = 3 then website_sessions else null end),1) as Thursday,
+	round(avg(case when weekday = 4 then website_sessions else null end),1) as Friday,
+	round(avg(case when weekday = 5 then website_sessions else null end),1) as Saturday,
+    round(avg(case when weekday = 6 then website_sessions else null end),1) as Sunday
+from hourly_daily_sessions
+group by 1 order by 1;
+
+-- #8. Product-level sales analysis
+
+select 
+	year(created_at) as year,
+    month(created_at) as month,
+    count(distinct order_id) as number_of_sales,
+    sum(price_usd) as revenue,
+    sum(price_usd - cogs_usd) as margin
+from orders
+	where created_at < '2013-01-04'
+group by 1,2;
+
+-- #9. Analyzing product launches
+select
+	year(website_sessions.created_at) as year,
+    month(website_sessions.created_at) as month,
+    count(distinct website_sessions.website_session_id) as sessions,
+    count(distinct orders.order_id) as orders,
+    count(distinct orders.order_id)/count(distinct website_sessions.website_session_id) as conversion_rate,
+    sum(orders.price_usd)/count(distinct website_sessions.website_session_id) as revenue_per_session,
+    count(distinct case when primary_product_id = '1' then orders.order_id else null end) as product_1_orders,
+    count(distinct case when primary_product_id = '2' then orders.order_id else null end) as product_2_orders
+from website_sessions  
+	left join orders
+		on orders.website_session_id = website_sessions.website_session_id
+where website_sessions.created_at between '2012-04-01' and '2013-04-01'
+group by 1,2;
